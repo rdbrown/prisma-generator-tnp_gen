@@ -1,7 +1,19 @@
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+
+generator prismaClassGenerator {
+    provider = "prisma-class-generator"
+    output = "./models"
+}
+
 generator custom_generator {
   provider = "node ../../node_modules/prisma-generator-tnp_gen"
-  output   = "../types"
+  output   = "./types"
 }
+
 
 datasource db {
   provider = "postgresql"

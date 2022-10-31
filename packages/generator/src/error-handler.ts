@@ -1,5 +1,5 @@
 import { Dictionary } from "@prisma/internals";
-import { PrismaClassGeneratorOptions } from "./generator";
+import { PrismaNestBaseGeneratorOptions } from "./generator";
 import { logger } from "@prisma/sdk";
 
 export class GeneratorFormatNotValidError extends Error {
@@ -14,10 +14,13 @@ export class GeneratorPathNotExists extends Error {}
 
 export const handleGenerateError = (e: Error) => {
     if (e instanceof GeneratorFormatNotValidError) {
-        const options = Object.keys(PrismaClassGeneratorOptions).map((key) => {
-            const value = PrismaClassGeneratorOptions[key];
-            return `\t${key} = (${value.defaultValue}) <- [${value.desc}]`;
-        });
+        const options = Object.keys(PrismaNestBaseGeneratorOptions).map(
+            (key) => {
+                //@ts-ignore
+                const value = PrismaNestBaseGeneratorOptions[key];
+                return `\t${key} = (${value.defaultValue}) <- [${value.desc}]`;
+            }
+        );
         logger.info(
             [
                 "\nUsage : ",
@@ -35,6 +38,6 @@ export const handleGenerateError = (e: Error) => {
         logger.error("path not valid in generator");
         return;
     }
-    console.log("unexpected error occured");
+    console.log("unexpected error occurred");
     console.log(e);
 };

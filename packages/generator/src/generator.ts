@@ -1,12 +1,17 @@
 import { generatorHandler, GeneratorOptions } from "@prisma/generator-helper";
-import { logger } from "@prisma/sdk";
-import { parseEnvValue } from "@prisma/internals";
+//import { logger } from "@prisma/sdk";
+import { logger, parseEnvValue } from "@prisma/internals";
 import * as path from "path";
 import { GeneratorPathNotExists } from "./error-handler";
 import { GENERATOR_NAME } from "./constants";
 import { genEnum } from "./helpers/genEnum";
 import { writeFileSafely } from "./utils/writeFileSafely";
+import { PrismaConvertor } from "./convertor";
 import { resolveConfig, format, Options } from "prettier";
+import { FileComponent } from "./components/file.component";
+import { ImportComponent } from "./components/import.component";
+import { getRelativeTSPath, prettierFormat, writeTSFile } from "./utils";
+import { INDEX_TEMPLATE } from "./templates/index.template";
 const { version } = require("../package.json");
 
 export const PrismaNestBaseGeneratorOptions = {
@@ -41,6 +46,8 @@ export class PrismaNestBaseGenerator {
     _prettierOptions: Options;
     rootPath: string;
     clientPath: string;
+
+    modelPath: string;
 
     constructor(options?: GeneratorOptions) {
         if (options) {
@@ -100,6 +107,17 @@ export class PrismaNestBaseGenerator {
         this.clientPath = clientGenerator?.output?.value ?? defaultPath;
     }
 
+    setPrismaModelsPath(): void {
+        const { otherGenerators, schemaPath } = this.options;
+
+        this.rootPath = schemaPath.replace("/prisma/schema.prisma", "");
+        const defaultPath = path.resolve(this.rootPath, "prisma/base/model");
+        const classGenerator = otherGenerators.find(
+            (g) => g.provider.value === "prisma-class-generator"
+        );
+        this.modelPath = classGenerator?.output?.value ?? defaultPath;
+    }
+
     run = async (): Promise<void> => {
         const { generator, dmmf } = this.options;
         const output = parseEnvValue(generator.output!);
@@ -107,6 +125,76 @@ export class PrismaNestBaseGenerator {
         // set path to the client
         const config = this.getConfig();
         this.setPrismaClientPath();
+
+        //set path to models
+        this.setPrismaModelsPath();
+        logger.info(`starting run: ${this.modelPath}`);
+        const convertor = PrismaConvertor.getInstance();
+        convertor.dmmf = dmmf;
+        convertor.config = config;
+
+        //get models
+        const models = convertor.getModels();
+        const files = models.map(
+            (modelComponent) => new FileComponent({ modelComponent, output })
+        );
+        const classToPath = files.reduce((result, fileRow) => {
+            const fullPath = path.resolve(
+                fileRow.dir as string,
+                fileRow.filename as string
+            );
+            result[fileRow.prismaModel.name] = fullPath;
+            return result;
+        }, {} as Record<string, string>);
+
+        files.forEach((fileRow) => {
+            fileRow.imports = fileRow.imports?.map((importRow) => {
+                const pathToReplace = importRow.getReplacePath(classToPath);
+                if (pathToReplace !== null) {
+                    importRow.from = fileRow.getRelativePath(pathToReplace);
+                }
+                return importRow;
+            });
+        });
+
+        files.forEach((fileRow) => {
+            fileRow.write(config.dryRun);
+        });
+
+        if (config.makeIndexFile) {
+            const indexFilePath = path.resolve(output, "index.ts");
+            const imports = files.map(
+                (fileRow) =>
+                    new ImportComponent(
+                        getRelativeTSPath(
+                            indexFilePath,
+                            fileRow.getPath() as string
+                        ),
+                        fileRow.prismaModel.name
+                    )
+            );
+
+            const content = INDEX_TEMPLATE.replace(
+                "#!{IMPORTS}",
+                imports.map((i) => i.echo("_")).join("\r\n")
+            )
+                .replace(
+                    "#!{RE_EXPORT_CLASSES}",
+                    files
+                        .map((f) => `	${f.prismaModel.reExportPrefixed("_")}`)
+                        .join("\r\n")
+                )
+                .replace(
+                    "#!{CLASSES}",
+                    files.map((f) => f.prismaModel.name).join(", ")
+                );
+            const formattedContent = prettierFormat(
+                content,
+                this.prettierOptions
+            );
+            writeTSFile(indexFilePath, formattedContent, config.dryRun);
+        }
+        return;
     };
 
     getConfig = (): PrismaNestBaseGeneratorConfig => {
