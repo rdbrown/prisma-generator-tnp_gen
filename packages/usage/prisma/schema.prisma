@@ -3,16 +3,20 @@ generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-1.0.x"]
 }
+// generator custom_generator {
+//   provider = "node ../../node_modules/prisma-generator-tnp_gen"
+//   output   = "./base"
+//   dryRun = false
+// }
+// generator prismaClassGenerator {
+//     provider = "prisma-class-generator"
+//     output = "./base/models"
+//     dryRun = false
+// }
 
-generator prismaClassGenerator {
-    provider = "prisma-class-generator"
-    output = "./models"
-}
 
-generator custom_generator {
-  provider = "node ../../node_modules/prisma-generator-tnp_gen"
-  output   = "./types"
-}
+
+
 
 
 datasource db {
@@ -22,8 +26,9 @@ datasource db {
 
 model User {
   id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  ///@IsEmail
+  email String  @unique @db.VarChar(255)
+  name  String? @db.VarChar(255)
 }
 
 enum NotificationType {

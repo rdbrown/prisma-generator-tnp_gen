@@ -30,6 +30,10 @@ export const PrismaNestBaseGeneratorOptions = {
     useSwagger: {
         desc: "use swagger decorator",
         defaultValue: true
+    },
+    output: {
+        desc: "output path",
+        defaultValue: "./base"
     }
 } as const;
 
@@ -125,10 +129,11 @@ export class PrismaNestBaseGenerator {
         // set path to the client
         const config = this.getConfig();
         this.setPrismaClientPath();
+        logger.info(`starting config: ${JSON.stringify(config)}`);
 
         //set path to models
         this.setPrismaModelsPath();
-        logger.info(`starting run: ${this.modelPath}`);
+
         const convertor = PrismaConvertor.getInstance();
         convertor.dmmf = dmmf;
         convertor.config = config;
@@ -138,6 +143,7 @@ export class PrismaNestBaseGenerator {
         const files = models.map(
             (modelComponent) => new FileComponent({ modelComponent, output })
         );
+        logger.info(`starting run: ${JSON.stringify(files)}`);
         const classToPath = files.reduce((result, fileRow) => {
             const fullPath = path.resolve(
                 fileRow.dir as string,
