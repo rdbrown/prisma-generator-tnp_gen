@@ -1,6 +1,6 @@
 {
   "name": "prisma-generator-tnp_gen",
-  "description": "Provide a description about your generator",
+  "description": "Creates custom base files to use with nest and prisma",
   "version": "1.0.0",
   "main": "dist/generator.js",
   "license": "MIT",
@@ -15,15 +15,18 @@
     "dev": "npx tsc -w",
     "build": "npx tsc",
     "prepack": "yarn build",
-    "test": "jest"
+    "test": "jest",
+    "watch": "nodemon --exec \"npm run build\" -e ts --ignore lib/"
   },
   "dependencies": {
     "@prisma/client": "3.12.0",
     "@prisma/generator-helper": "3.12.0",
     "@prisma/sdk": "3.12.0",
-    "prettier": "2.5.1"
+    "prettier": "^2.5.1",
+    "prettier-format": "^3.1.0"
   },
   "devDependencies": {
+    "@prisma/internals": "^4.5.0",
     "@types/jest": "27.0.3",
     "@types/node": "17.0.21",
     "@types/prettier": "2.4.2",

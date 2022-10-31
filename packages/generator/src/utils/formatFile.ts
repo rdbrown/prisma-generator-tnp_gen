@@ -1,8 +1,10 @@
+import { logger } from '@prisma/sdk'
 import prettier from 'prettier'
 
 export const formatFile = (content: string): Promise<string> => {
   return new Promise((res, rej) =>
     prettier.resolveConfig(process.cwd()).then((options) => {
+      logger.info('formatting content')
       if (!options) {
         res(content) // no prettier config was found, no need to format
       }
@@ -17,6 +19,6 @@ export const formatFile = (content: string): Promise<string> => {
       } catch (error) {
         rej(error)
       }
-    })
+    }),
   )
 }
